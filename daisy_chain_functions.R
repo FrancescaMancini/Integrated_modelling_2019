@@ -108,21 +108,7 @@ daisy_integrated <- function(rdataFile, outDir = getwd(),
   cat('output', out_integrated_model$n.iter, '\n', 
       file = paste0(outDir, "progress.txt"), append = TRUE)
   
-  # remove iterations count from file name
-  rdataFile <- gsub('_it[0-9]+', '', rdataFile)
-  
-  out_integrated_model$filename <- gsub('.rdata$',
-                                        paste('_it', out_integrated_model$n.iter, 'integrated.rdata', sep = ''),
-                                        rdataFile)
-  
-  save(out_integrated_model, file = gsub('.rdata$',
-                                         paste('_it', out_integrated_model$n.iter, 'integrated.rdata', sep = ''),
-                                         rdataFile))
-  return(list(out_integrated_model = out_integrated_model,
-              tot.it = out_integrated_model$n.iter,
-              filename = gsub('.rdata$',
-                              paste('_it', out_integrated_model$n.iter, 'integrated.rdata', sep = ''),
-                              rdataFile)))
+  return(list(out_integrated_model = out_integrated_model))
 }
 
 

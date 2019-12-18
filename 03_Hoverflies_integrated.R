@@ -146,7 +146,7 @@ if(parameters$start == 1){
                                      sep = '_'),
                                '.rdata'))
   # run the daisy
-  out_HRS_model <- daisyChain(rdataFile = filename,
+  out_integrated_model <- daisyChain(rdataFile = filename,
                               outDir = output_folder,
                               nDaisy = 1,
                               by.it = length(parameters$start:parameters$end),
@@ -155,7 +155,7 @@ if(parameters$start == 1){
                               model = "integrated", 
                               update = TRUE)
   
-  save(out_HRS_model, file = file.path(output_folder,
+  save(out_integrated_model, file = file.path(output_folder,
                                        paste0(paste(parameters$species,
                                                     paste0("it",
                                                            parameters$end),
