@@ -3,12 +3,16 @@
 # dir - top directory of the job
 # originalJob - the original job file
 
-restart_job <- function(dir = getwd(), originalJob,
+restart_job <- function(dir = getwd(), params_dir  = getwd(),  
+                        data_dir = getwd(), output_dir = getwd(),
+                        console_files_dir = getwd(),
+                        oe_files_dir = getwd(), originalJob, 
                         MbMemory = NULL, walltime = NULL,
-			q = NULL, remove_logs = FALSE){
+			                  q = NULL, remove_logs = FALSE){
   
   # Get the roster
-  roster <- read.csv(file = 'roster.csv', stringsAsFactors = FALSE)
+  roster <- read.csv(file = paste0(data_dir, 'parameters.csv'), 
+                     stringsAsFactors = FALSE)
   
   # Get parameters from the original
   originalJob_eg <- readLines(originalJob)[1]
@@ -16,10 +20,10 @@ restart_job <- function(dir = getwd(), originalJob,
   if(is.null(MbMemory)) MbMemory <- as.numeric(gsub('mem=', '', stringr::str_extract(originalJob_eg, 'mem=[[:digit:]]+')))
   if(is.null(walltime)) walltime <- gsub('\\-W\\s', '', stringr::str_extract(originalJob_eg, '\\-W\\s[[:digit:][:punct:]]+'))
   
-  data_files <- list.files(file.path(dir, 'output/'), pattern = '.rdata$')
-  consolefiles <- list.files(path = 'console_output', pattern = paste0('^console'),
+  data_files <- list.files(path = output_dir, pattern = '.rdata$')
+  consolefiles <- list.files(path = console_files_dir, pattern = paste0('^console'),
                              full.names = TRUE)
-  oe_files <- list.files(path = 'console_output', pattern = "\\.[oe]$",
+  oe_files <- list.files(path = oe_files_dir, pattern = "\\.[oe]$",
                          full.names = TRUE)
   
   # Work out which lines in the roster have output
@@ -47,8 +51,8 @@ restart_job <- function(dir = getwd(), originalJob,
                            '-M', as.integer(MbMemory*1000),
                            paste('-W', walltime), #wall time
                            job_line, #job array
-                           '-oo console_output/R-%J-%I.o', #log
-                           '-eo console_output/R-%J-%I.e', #log
+                           paste0('-oo ', oe_files_dir, 'R-%J-%I.o'), #log
+                           paste0('-eo ', oe_files_dir, 'R-%J-%I.e'), #log
                            '< multi_array.job') #call to R
       
       doc <- c(doc, submit_line)
