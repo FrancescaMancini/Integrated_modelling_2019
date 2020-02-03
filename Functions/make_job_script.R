@@ -63,13 +63,14 @@ length(taxa)
 
 
 chain <- 200
-max_it <- 200000
+start_it <- 200000
+max_it <- 400000
 
 write.csv(data.frame(species = lapply(taxa,
                                       FUN = function(x){rep(x,chain)}) %>% unlist(),
-                     start = rep(seq(1,((max_it/chain)*(chain-1)+1),(max_it/chain)),length(taxa)),
+                     start = rep(seq(start_it,((max_it/chain)*(chain-1)+1),(max_it/chain)),length(taxa)),
                      end = rep(seq((max_it/chain),max_it,(max_it/chain)),length(taxa)),
-                     chain = rep(1:200,length(taxa)),
+                     chain = rep(200:400,length(taxa)),
                      seed = round(runif(n = chain*length(taxa), min = 0, max = 2147483647),0)),
           'parameters.csv',row.names = FALSE)
 

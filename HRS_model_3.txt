@@ -1,0 +1,38 @@
+model {
+
+    # Priors 
+    # state model priors
+    a ~ dunif(-10,10) # year effect (only one year here, should I remove it?)
+    
+    # RANDOM EFFECT for SITE
+    for (i in 1:nsite) {
+      eta[i] ~ dnorm(0, tau2)       
+    } 
+    
+    
+    tau2 <- 1/(sigma2 * sigma2)
+    sigma2 ~ dt(0, 1, 1)T(0,)
+    dtype1.p ~ dunif(-10, 10)
+    dtype2.p ~ dunif(-10, 10)
+    dtype3.p ~ dunif(-10, 10)
+    beta1 ~ dunif(1, 366)  # Julian day priors
+    beta2 ~ dunif(0, 90)
+    beta3 ~ dnorm(0, 0.0001)
+    
+    for (d in 1:365) {
+      f_x[d] <- (1/((2 * 3.141593)^0.5 * beta2) * exp(-((d - beta1)^2/(2 * beta2^2))))
+    }
+    for (k in 1:nvisit1) {
+      y1[k] ~ dbern(Py1[k])
+      Py1[k] <- z[Site1[k]] * p1[k]
+      logit(p1[k]) <- dtype1.p + dtype2.p * DATATYPE2[k, 1] +
+        dtype3.p * DATATYPE3[k, 1] + beta3 * f_x[JulDate1[k]]
+    }
+    
+    for (i in 1:nsite) {
+      z[i] ~ dbern(muZ[i])
+      logit(muZ[i]) <- a + eta[i]
+    }
+    psi.fs <- sum(z[1:nsite])/nsite
+  }
+  
