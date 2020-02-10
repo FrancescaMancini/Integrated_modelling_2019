@@ -89,143 +89,69 @@ summary(poss_errors)
 
 summary(hrs_sp_names)
 
-# poss_errors_grouped <- poss_errors %>%
-#   group_by(TO_GRIDREF, startdate) %>%
-#   summarise(list_length = n_distinct(NAME)) %>%
-#   ungroup()
-# 
-# plot(poss_errors_grouped$list_length ~ poss_errors_grouped$startdate)
+# group the observations by site and date
+# to calculate a list length for every 
+# possibly wrong visit and plot the LL by data
+poss_errors_grouped <- poss_errors %>%
+  group_by(TO_GRIDREF, startdate) %>%
+  summarise(list_length = n_distinct(NAME)) %>%
+  ungroup()
 
+plot(poss_errors_grouped$list_length ~ poss_errors_grouped$startdate)
+
+# from the plot it is clear that there are some potentially wrong observations
+# in January, February and December, we can extract them from the plot
+
+poss_outliers <- identify(poss_errors_grouped$startdate, poss_errors_grouped$list_length)
+
+poss_outliers <- poss_errors_grouped[outliers,]
+
+# Following Kath's observation that some of these records
+# may be duplicates of correct records, where the date has been transposed
+# we can try to extract from the original dataset all the records
+# from the sites in outliers and the same and trasnposed date
 
 poss_duplicates <- hrs_sp_names %>%
-  group_by(TO_GRIDREF, CONCEPT, ABUNDANCE_COMMENT) %>%
-  filter(startdate %in% poss_errors$startdate | 
-         startdate %in% as.Date(poss_errors$startdate, format = "%Y-d%-m%")) %>%
-  filter(n() > 1) #%>%
+  filter(TO_GRIDREF %in% outliers$TO_GRIDREF) %>%
+  filter(startdate %in% outliers$startdate | 
+         startdate %in% as.Date(outliers$startdate, format = "%Y-d%-m%")) #%>%
+  # group_by(TO_GRIDREF, CONCEPT, ABUNDANCE_COMMENT) %>%
+  # filter(n() > 1) #%>%
 #  do(filter(as.Date(TO_STARTDATE, format = "%d/%m/%Y")))
 
 
 
+# write.csv(poss_duplicates, "./Data/HRS_2017_possible_duplicates.csv",
+#           row.names = FALSE)
+
+# after manuallly looking at the csv file
+# it appears that the records are not duplicated, 
+# therefore the best thing to do at the moment
+# is to exclude all those records that are very unlikely
+# from the dataset
+# these dates will have to be revisited and 
+# the accuracy f the dates verified from the original data files
+
+plot(poss_errors_grouped$list_length ~ poss_errors_grouped$startdate)
+
+outliers <- identify(poss_errors_grouped$startdate, poss_errors_grouped$list_length)
+
+outliers <- poss_errors_grouped[outliers,]
+
+# filter the original data using site and date from outliers
+
+hrs_sp_names_filtered <- hrs_sp_names %>%
+  anti_join(outliers, by = c("TO_GRIDREF", "startdate"))
+
+# make sure all outliers have been removed
+
+hrs_sp_names_filtered_grouped <- hrs_sp_names_filtered %>%
+  group_by(TO_GRIDREF, startdate) %>%
+  summarise(list_length = n_distinct(NAME)) %>%
+  ungroup()
+
+plot(hrs_sp_names_filtered_grouped$list_length ~ hrs_sp_names_filtered_grouped$startdate)
 
 
-
-hrs_sp_names$JulDate <- as.numeric(format(hrs_sp_names$startdate, "%j"))
-hist(hrs_sp_names$JulDate)
-
-
-
-hrs_sp_names$YEAR <- format(hrs_sp_names$startdate,"%Y")
-
-
-HRS_formatted <- formatOccData(taxa = hrs_sp_names$NAME, 
-                                      survey = paste(hrs_sp_names$startdate,
-                                                     hrs_sp_names$TO_GRIDREF, sep = "-"), 
-                                      # create survey value from date and 1Km gridref to keep all visits as replicates
-                                      site = hrs_sp_names$GRIDREF_5KM_PREC,
-                                      closure_period = hrs_sp_names$YEAR)
-
-
-HRS_formatted$occDetdata$date <- as.numeric(format(as.POSIXlt(substr(HRS_formatted$occDetdata$visit, 7, 16),
-                                                                     format = "%Y-%m-%d"), "%j"))
-
-
-plot(HRS_formatted$occDetdata$L ~ HRS_formatted$occDetdata$date)
-
-# find the outliers
-identify(HRS_formatted$occDetdata$L ~ HRS_formatted$occDetdata$date)
-outliers <- HRS_formatted$occDetdata[c(2434, 2435, 2437, 2754, 3196, 3358, 11741),]
-# extract them from the dataset
-outliers_df <- filter(hrs_sp_names, GRIDREF_5KM_PREC %in% outliers$site & JulDate %in% outliers$date)
-
-
-
-HRS_formatted$occDetdata$DAY <- as.numeric(format(as.POSIXlt(substr(HRS_formatted$occDetdata$visit, 7, 16),
-                                                                    format = "%Y-%m-%d"), "%d"))
-
-HRS_formatted$occDetdata$MONTH <- as.numeric(format(as.POSIXlt(substr(HRS_formatted$occDetdata$visit, 7, 16),
-                                                                      format = "%Y-%m-%d"), "%m"))
-
-HRS_formatted$occDetdata$YEAR <- as.numeric(format(as.POSIXlt(substr(HRS_formatted$occDetdata$visit, 7, 16),
-                                                               format = "%Y-%m-%d"), "%Y"))
-
-ggplot(HRS_formatted$occDetdata, aes(x = DAY, y = L)) +
-  geom_point() +
-  facet_wrap(~ MONTH)
-
-
-
-hrs_winter <- subset(hrs_sp_names, JulDate < 80 | JulDate > 300)
-hist(hrs_winter$JulDate)
-
-
-hrs_winter$YEAR <- format(hrs_winter$startdate,"%Y")
-hrs_winter$MONTH <- format(hrs_winter$startdate,"%m")
-hrs_winter$DAY <- format(hrs_winter$startdate,"%d")
-
-
-
-HRS_winter_formatted <- formatOccData(taxa = hrs_winter$NAME,
-                                      survey = paste(hrs_winter$startdate,hrs_winter$TO_GRIDREF, sep = "-"),
-                                      # create survey value from date and 1Km gridref to keep all visits as replicates
-                                      site = hrs_winter$GRIDREF_5KM_PREC,
-                                      closure_period = hrs_winter$YEAR)
-
-HRS_winter_formatted$occDetdata$date <- as.numeric(format(as.POSIXlt(substr(HRS_winter_formatted$occDetdata$visit, 7, 16),
-                                                                     format = "%Y-%m-%d"), "%j"))
-
-
-plot(HRS_winter_formatted$occDetdata$L ~ HRS_winter_formatted$occDetdata$date)
-
-
-HRS_winter_formatted$occDetdata$DAY <- as.numeric(format(as.POSIXlt(substr(HRS_winter_formatted$occDetdata$visit, 7, 16),
-                                                                     format = "%Y-%m-%d"), "%d"))
-
-HRS_winter_formatted$occDetdata$MONTH <- as.numeric(format(as.POSIXlt(substr(HRS_winter_formatted$occDetdata$visit, 7, 16),
-                                                                    format = "%Y-%m-%d"), "%m"))
-
-
-# HRS_winter_coordinates <- gr2gps_latlon(HRS_winter_formatted$occDetdata$site, precision = 5000)
-# 
-# HRS_winter_formatted$occDetdata$LATITUDE <- HRS_winter_coordinates$LATITUDE
-# HRS_winter_formatted$occDetdata$LONGITUDE <- HRS_winter_coordinates$LONGITUDE
-# 
-# UK_df <- fortify(UK$britain)
-# hrs_new_coordinates <- LatLong_Cartesian(HRS_winter_formatted$occDetdata$LONGITUDE,
-#                                          HRS_winter_coordinates$LATITUDE)
-# HRS_winter_formatted$occDetdata$LATITUDE <- hrs_new_coordinates$y
-# HRS_winter_formatted$occDetdata$LONGITUDE <- hrs_new_coordinates$x
-# 
-# ggplot() +
-#   geom_polygon(data = UK_df, aes(x = long, y = lat, group = id)) +
-#   geom_point(data = HRS_winter_formatted$occDetdata, 
-#              aes(x = LONGITUDE, y = LATITUDE, size = L), alpha = 0.5)
-
-
-color <- rgb(0,0,0, alpha = 0.3)
-
-par(mar = c(0.1,0.1,1,0.1))
-
-plot_GIS(UK$britain, new.window = FALSE, show.axis = FALSE, 
-         show.grid = FALSE, xlab = "", ylab = "")
-
-plotUK_gr(HRS_winter_formatted$occDetdata$site, gr_prec = 5000, border = "red")
-
-plotUK_gr_points(HRS_winter_formatted$occDetdata$site, 
-                 cex = HRS_winter_formatted$occDetdata$L/5,
-                 col = color, pch = 19)
-
-
-
-
-# transform grid references to 10Km resolution
-# this is just to be able to calculate statistics for the next step
-
-HRS_formatted$occDetdata$region <- reformat_gr(HRS_formatted$occDetdata$site, prec_out = 10000, 
-                                    precision = 5000)
-
-HRS_L_summary <- HRS_formatted$occDetdata %>%
-  group_by(region, MONTH) %>%
-  summarise(median_L = median(L), 
-            min_L = min(L),
-            max_L = max(L),
-            quantile_95 = quantile(L, probs = 0.95))
+write.csv(hrs_sp_names_filtered, "./Data/HRS_2017_filtered.csv",
+          row.names = FALSE)
